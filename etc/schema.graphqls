@@ -1,0 +1,37 @@
+type Query {
+    mwFileDownloads (
+        attachmentIds: [Int] @doc(description: "Attachment IDs")
+        sectionIds: [Int] @doc(description: "Section IDs")
+    ): MwFileDownloads @doc(description: "The query returns information about a File Downloads") @resolver(class: "MageWorx\\DownloadsGraphQl\\Model\\Resolver\\FileDownloads")
+}
+
+interface ProductInterface {
+    mw_attachments: MwProductAttachments @doc(description: "Product Attachments") @resolver(class: "MageWorx\\DownloadsGraphQl\\Model\\Resolver\\Product\\Attachments")
+}
+
+type MwFileDownloads {
+    block_title: String @doc(description: "File Downloads Block Title")
+    is_group_by_section: Boolean @doc(description: "Indicates whether to group attachments by section")
+    how_to_download_message: String @doc(description: "'How to download' message")
+    items: [MwAttachment] @doc(description: "An array of Attachments")
+}
+
+type MwProductAttachments {
+    tab_title: String @doc(description: "Product Attachments Tab Title")
+    block_title: String @doc(description: "Product Attachments Block Title")
+    is_group_by_section: Boolean @doc(description: "Indicates whether to group attachments by section")
+    how_to_download_message: String @doc(description: "'How to download' message")
+    items: [MwAttachment] @doc(description: "An array of Product Attachments")
+}
+
+type MwAttachment @doc(description: "MwAttachment defines all Attachment information") {
+    icon_type: String @doc(description: "Attachment icon type")
+    id: Int @doc(description: "Attachment ID")
+    name: String @doc(description: "Attachment name")
+    url: String @doc(description: "Attachment URL")
+    size_str: String @doc(description: "Attachment size")
+    downloads_number: Int @doc(description: "Number of downloads")
+    description: String @doc(description: "Attachment description")
+    section_name: String @doc(description: "Section name")
+    section_id: Int @doc(description: "Section ID")
+}

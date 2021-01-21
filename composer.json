@@ -1,0 +1,22 @@
+{
+    "name": "mageworx/module-downloads-graph-ql",
+    "description": "N/A",
+    "type": "magento2-module",
+    "require": {
+        "magento/framework": ">=102.0.0 < 104",
+        "mageworx/module-downloads": ">= 2.8.1"
+    },
+    "license": [
+        "OSL-3.0",
+        "AFL-3.0"
+    ],
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "MageWorx\\DownloadsGraphQl\\": ""
+        }
+    },
+    "version": "1.0.0"
+}
