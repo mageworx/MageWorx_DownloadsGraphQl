@@ -38,7 +38,7 @@ section_id: Int. escription: "Section ID
       mw_attachments {
         tab_title
         block_title
-        items {
+        items {         
           icon_type
           id
           name
@@ -51,7 +51,8 @@ section_id: Int. escription: "Section ID
         }
       }
     }
-    }
+  }
+}
 ```
 
 **Response:**
@@ -121,15 +122,22 @@ items: [MwAttachment] An array of Attachments
 
 ```
 {
-  mwFileDownloads(attachmentIds:[1]){
-    block_title
-    is_group_by_section
-    how_to_download_message
-    items {
-      name
-      section_name
+    mwFileDownloads(attachmentIds:[1]){
+        block_title
+        is_group_by_section
+        how_to_download_message
+        items {
+          icon_type
+          id
+          name
+          url
+          size_str
+          downloads_number
+          description
+          section_name
+          section_id
+        }
     }
-  }
 }
 ```
 
@@ -137,19 +145,26 @@ items: [MwAttachment] An array of Attachments
 
 ```
 {
-  "data": {
-    "mwFileDownloads": {
-      "block_title": "File Downloads Title",
-      "is_group_by_section": false,
-      "how_to_download_message": "You have to %login% or %register% to download this file",
-      "items": [
-        {
-          "name": "File attach",
-          "section_name": "Default"
+    "data": {
+        "mwFileDownloads": {
+            "block_title": "File Downloads Title",
+            "is_group_by_section": true,
+            "how_to_download_message": "You have to %login% or %register% to download this file",
+            "items": [
+                {
+                    "icon_type": "jpg",
+                    "id": 50,
+                    "name": "Default Name",
+                    "url": "",
+                    "size_str": "11.7 KB",
+                    "downloads_number": 0,
+                    "description": "Default Description",
+                    "section_name": "Default",
+                    "section_id": 1
+                }
+            ]
         }
-      ]
     }
-  }
 }
 ```
 The same information can be obtained for the Customer group using the authorization token.

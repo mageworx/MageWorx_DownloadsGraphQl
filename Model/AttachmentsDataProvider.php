@@ -9,25 +9,23 @@ declare(strict_types=1);
 namespace MageWorx\DownloadsGraphQl\Model;
 
 use Magento\Customer\Api\Data\CustomerInterface;
-use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\UrlInterface;
 use MageWorx\Downloads\Helper\Data as HelperData;
 use MageWorx\Downloads\Model\Attachment\Source\FileSize;
-use MageWorx\Downloads\Model\ResourceModel\Attachment\Collection as AttachmentCollection;
-use MageWorx\Downloads\Model\ResourceModel\Attachment\CollectionFactory as AttachmentCollectionFactory;
 use MageWorx\Downloads\Model\Attachment;
 
 class AttachmentsDataProvider
 {
     /**
+     * @var ResourceConnection
+     */
+    private $resourceConnection;
+
+    /**
      * @var HelperData
      */
     protected $helperData;
-
-    /**
-     * @var AttachmentCollectionFactory
-     */
-    protected $attachmentCollectionFactory;
 
     /**
      * Url Builder
@@ -47,20 +45,28 @@ class AttachmentsDataProvider
     protected $customerGroupId;
 
     /**
+     * @var \MageWorx\Downloads\Api\AttachmentManagerInterface
+     */
+    protected $attachmentManager;
+
+    /**
      * AttachmentsDataProvider constructor.
      *
      * @param HelperData $helperData
-     * @param AttachmentCollectionFactory $attachmentCollectionFactory
      * @param UrlInterface $urlBuilder
+     * @param \MageWorx\Downloads\Api\AttachmentManagerInterface $attachmentManager
+     * @param ResourceConnection $resourceConnection
      */
     public function __construct(
         HelperData $helperData,
-        AttachmentCollectionFactory $attachmentCollectionFactory,
-        UrlInterface $urlBuilder
+        UrlInterface $urlBuilder,
+        \MageWorx\Downloads\Api\AttachmentManagerInterface $attachmentManager,
+        ResourceConnection $resourceConnection
     ) {
         $this->helperData                  = $helperData;
-        $this->attachmentCollectionFactory = $attachmentCollectionFactory;
         $this->urlBuilder                  = $urlBuilder;
+        $this->attachmentManager           = $attachmentManager;
+        $this->resourceConnection          = $resourceConnection;
     }
 
     /**
@@ -146,34 +152,34 @@ class AttachmentsDataProvider
         array $sectionIds = null,
         int $productId = null
     ): array {
-        $attachments = [];
+        $result = [];
 
-        if ($this->helperData->isHideFiles()) {
-            $collection = $this->getAttachmentCollection($storeId, true, $attachmentIds, $sectionIds, $productId);
-            $inGroupIds = $collection->getAllIds();
-        } else {
-            $collection = $this->getAttachmentCollection($storeId, false, $attachmentIds, $sectionIds, $productId);
-            $inGroupIds = $this->getAttachmentCollection($storeId, true, $attachmentIds, $sectionIds, $productId)
-                               ->getAllIds();
+        $attachments = $this->attachmentManager->getAttachments(
+            $this->getCustomerGroupId(),
+            $productId,
+            (array)$attachmentIds,
+            (array)$sectionIds
+        );
+        $inGroupIds  = array_keys($attachments);
+
+        if (!$this->helperData->isHideFiles()) {
+            $attachments = $this->attachmentManager->getAttachments(
+                null,
+                $productId,
+                (array)$attachmentIds,
+                (array)$sectionIds
+            );
         }
 
-        foreach ($collection->getItems() as $item) {
-            if (!$this->isAllowByCount($item)) {
-                continue;
-            }
-
+        foreach ($attachments as $item) {
             if (in_array($item->getId(), $inGroupIds)) {
                 $item->setIsInGroup(true);
             }
 
-            $attachments[] = $item;
+            $result[] = $item;
         }
 
-        if (!$this->helperData->isGroupBySection()) {
-            return $attachments;
-        }
-
-        return $this->getAttachmentsSortedBySection($attachments);
+        return $this->getAttachmentsSortedBySection($result);
     }
 
     /**
@@ -207,52 +213,9 @@ class AttachmentsDataProvider
     }
 
     /**
-     * @param int $storeId
-     * @param bool $isUseCustomerGroupFilter
-     * @param array|null $attachmentIds
-     * @param array|null $sectionIds
-     * @param int|null $productId
-     * @return AttachmentCollection
-     */
-    protected function getAttachmentCollection(
-        int $storeId,
-        bool $isUseCustomerGroupFilter = true,
-        array $attachmentIds = null,
-        array $sectionIds = null,
-        int $productId = null
-    ): AttachmentCollection {
-        /** @var AttachmentCollection $collection */
-        $collection = $this->attachmentCollectionFactory->create();
-        $collection->addFieldToFilter('is_active', Attachment::STATUS_ENABLED);
-        $collection->addFieldToFilter('section_table.is_active', \MageWorx\Downloads\Model\Section::STATUS_ENABLED);
-        $collection->addStoreFilter($storeId);
-
-        if ($isUseCustomerGroupFilter) {
-            $collection->addCustomerGroupFilter($this->getCustomerGroupId($collection->getConnection()));
-        }
-
-        if ($attachmentIds) {
-            $collection->addFieldToFilter('attachment_id', $attachmentIds);
-        }
-
-        if ($sectionIds) {
-            $collection->addFieldToFilter('section_id', $sectionIds);
-        }
-
-        if ($productId) {
-            $collection->addProductFilter($productId);
-        }
-
-        $collection->addSortOrder();
-
-        return $collection;
-    }
-
-    /**
-     * @param AdapterInterface $connection
      * @return int
      */
-    protected function getCustomerGroupId(AdapterInterface $connection): int
+    protected function getCustomerGroupId(): int
     {
         if (isset($this->customerGroupId)) {
             return $this->customerGroupId;
@@ -262,29 +225,12 @@ class AttachmentsDataProvider
             return $this->customerGroupId = \Magento\Customer\Api\Data\GroupInterface::NOT_LOGGED_IN_ID;
         }
 
-        $select = $connection->select();
+        $select = $this->resourceConnection->select();
         $select
             ->from('customer_entity', CustomerInterface::GROUP_ID)
             ->where('entity_id', $this->customerId);
 
-        return $this->customerGroupId = (int)$connection->fetchOne($select);
-    }
-
-    /**
-     * @param Attachment $item
-     * @return boolean
-     */
-    protected function isAllowByCount(Attachment $item)
-    {
-        $limit = $item->getDownloadsLimit();
-
-        if ($limit) {
-            if ($item->getDownloads() >= $limit) {
-                return false;
-            }
-        }
-
-        return true;
+        return $this->customerGroupId = (int)$this->resourceConnection->fetchOne($select);
     }
 
     /**
@@ -293,8 +239,8 @@ class AttachmentsDataProvider
      */
     protected function getIconType(Attachment $attachment): string
     {
-        if ($attachment->getType()) {
-            return $attachment->getType();
+        if ($attachment->getFiletype()) {
+            return $attachment->getFiletype();
         }
 
         if ($attachment->getUrl()) {
