@@ -80,8 +80,8 @@ class AttachmentsDataProvider
     public function getData(
         int $storeId,
         int $customerId,
-        array $attachmentIds = null,
-        array $sectionIds = null
+        ?array $attachmentIds = null,
+        ?array $sectionIds = null
     ): ?array {
         $this->customerId = $customerId;
         $attachments      = $this->getAttachments($storeId, $attachmentIds, $sectionIds);
@@ -148,9 +148,9 @@ class AttachmentsDataProvider
      */
     protected function getAttachments(
         int $storeId,
-        array $attachmentIds = null,
-        array $sectionIds = null,
-        int $productId = null
+        ?array $attachmentIds = null,
+        ?array $sectionIds = null,
+        ?int $productId = null
     ): array {
         $result = [];
 
